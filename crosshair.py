@@ -4,18 +4,17 @@ import os
 class Crosshair(pygame.sprite.Sprite):
     def __init__(self, square_size):
         pygame.sprite.Sprite.__init__(self)
-
         # Initialize variables
-        self._image_name = 'crosshair.png'
-
+        self.image_name = 'crosshair.png'
         # Assign sprite attributes
         # Load image to surfaces
-        self.image = self.load_image(square_size)
-        # Assign image dimensions to a rect
-        self.rect = self.image.get_rect()
+        self.rect = None
+        self.load_image(self.image_name)
+        self.scale_image(square_size)
 
-    def move(self, x, y):
-        self.rect.move_ip(x, y)
+    def move_to(self, x, y):
+        self.rect.x = x
+        self.rect.y = y
     
     def move_up(self, pixels, bounds = None):
         if bounds != None:
@@ -74,15 +73,34 @@ class Crosshair(pygame.sprite.Sprite):
         square_list = pygame.sprite.spritecollide(self, square_group, False)
         # There should be only one square
         return square_list[0]
-   
-    def load_image(self, square_size):
-        # Loads the image and then scales by the width and height arguments
+
+    def load_image(self, image_name):
+        # Loads the image to the self.image surface
+        # Returns the updated image surface
+        self.image = pygame.image.load(os.path.join('data', image_name)).convert_alpha() 
+        self.image_name = image_name
+        # Update the rectangle of the crosshair
+        self.rect = self.image.get_rect()
+
+        return self.image
+
+    def scale_image(self, size):
+        # Scales the image based on the size argument
         # Then assigns the scaled image to the surface attributes
-        # Returns the updated default surface
-        scale_w = int(square_size[0])
-        scale_h = int(square_size[1])
-        img_surface = pygame.image.load(os.path.join('data', self._image_name)).convert_alpha()
-        self.image = pygame.transform.scale(img_surface.copy(), (scale_w, scale_h))
+        # and updates the rect attribute
+        # Returns the updated image surface
+
+        # Scale
+        width = size[0]
+        height = size[1]
+        self.image = pygame.transform.scale(self.image, (width, height))
+
+        # Update the rectangle of the crosshair
+        current_x = self.rect.x
+        current_y = self.rect.y
+        self.rect = self.image.get_rect()
+        self.move_to(current_x, current_y)
+        
         return self.image
 
     def draw(self, surface):

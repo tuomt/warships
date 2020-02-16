@@ -28,7 +28,7 @@ class Ship(pygame.sprite.Sprite):
         self._default_surf = None
         self._rotated_surf = None
         self.rect = None
-        self.image = self.load_image(self.image_name)
+        self.load_image(self.image_name)
         # Scale the image size according to the square size
         self.scale_image(self._square_size)
 

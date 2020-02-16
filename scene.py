@@ -5,6 +5,7 @@ import settings
 import grid
 import networking.client
 import networking.server
+from networking.packet import Packet
 import color
 from crosshair import Crosshair
 
@@ -98,11 +99,11 @@ class MainMenu(Scene, menu.Menu):
         if selected == self.exit_btn or selected == -1:
             exit()
         elif selected == self.host_btn:
-            self.scene_handler.switch(Scene.HOST_MENU, self.screen, "192.168.0.102", 7777)
+            self.scene_handler.switch(Scene.HOST_MENU, self.screen, "localhost", 7777)
         elif selected == self.connect_btn:
-            self.scene_handler.switch(Scene.CONNECT_MENU, self.screen, "192.168.0.102", 7777)
+            self.scene_handler.switch(Scene.CONNECT_MENU, self.screen, "localhost", 7777)
         elif selected == self.test_btn:
-            self.scene_handler.switch(Scene.PLACEMENT, self.screen, settings)
+            self.scene_handler.switch(Scene.PLACEMENT, self.screen, settings, None)
 
     def do_logic(self):
         pass
@@ -197,20 +198,8 @@ class WaitHostMenu(Scene, menu.Menu):
 
     def do_logic(self):
         if self.connection.connected:
-            self.scene_handler.switch(Scene.PLACEMENT, self.screen, settings)
-        """
-        else:
-            try: # TODO: oserror catch not working
-                if wait_menu(connection):
-                    placement(settings, connection, square_group, reserved_squares)
-                else:
-                    # Tell the server thread to stop accepting connections
-                    # The socket will be closed
-                    interrupt_queue.put(True)
-            except OSError as e:
-                print("Error: a server with this IP address and port is already running.")
-        """
-
+            self.scene_handler.switch(Scene.PLACEMENT, self.screen, settings, self.connection)
+       
     def draw(self):
         self.draw_components()
         pass
@@ -294,18 +283,7 @@ class WaitConnectMenu(Scene, menu.Menu):
 
     def do_logic(self):
         if self.connection.connected:
-            self.scene_handler.switch(Scene.PLACEMENT, self.screen, settings)
-        """
-        if connection.recv_queue.empty() == False:
-            packet = connection.recv_queue.get(False)
-            if packet.type == Packet.T_READY:
-                ready = packet.msg
-                print("ready:", packet.msg)
-            else:
-                # The packet type is wrong so it will be put back in the queue
-                print("wrong packet type:", packet.type)
-                connection.recv_queue.put(packet)
-        """
+            self.scene_handler.switch(Scene.PLACEMENT, self.screen, settings, self.connection)
 
     def check_events(self):
         selected = self.check_menu_events()
@@ -320,9 +298,13 @@ class WaitConnectMenu(Scene, menu.Menu):
         self.draw_components()
 
 class Placement(Scene):
-    def __init__(self, scene_handler, screen, settings):
+    def __init__(self, scene_handler, screen, settings, connection):
         self.scene_handler = scene_handler
         self.screen = screen
+        self.connection = connection
+        self.data_sent = False
+        self.data_received = False
+        self.enemy_ships = None
         # Create a game grid
         grid_offset_w = 50
         grid_offset_h = 50
@@ -334,7 +316,7 @@ class Placement(Scene):
         self.reserved_squares = pygame.sprite.Group()
         self.colliding_squares = []
         # Create a sprite group for the ships
-        self.ships = pygame.sprite.LayeredUpdates()
+        self.unplaced_ships = pygame.sprite.LayeredUpdates()
         # Is normal sprite group enough?
         self.placed_ships = pygame.sprite.LayeredUpdates() 
         self.square_size = self.grid.get_square_size_abs()
@@ -344,27 +326,28 @@ class Placement(Scene):
         for i in range(0, settings.carrier_count):
             carrier = ship.Ship(settings.carrier_size, self.square_size)
             carrier.move_to(self.start_square.rect.x, self.start_square.rect.y)
-            self.ships.add(carrier)
+            self.unplaced_ships.add(carrier)
         for i in range(0, settings.battleship_count):
             battleship = ship.Ship(settings.battleship_size, self.square_size)
             battleship.move_to(self.start_square.rect.x, self.start_square.rect.y)
-            self.ships.add(battleship)
+            self.unplaced_ships.add(battleship)
         for i in range(0, settings.cruiser_count):
             cruiser = ship.Ship(settings.cruiser_size, self.square_size)
             cruiser.move_to(self.start_square.rect.x, self.start_square.rect.y)
-            self.ships.add(cruiser)
+            self.unplaced_ships.add(cruiser)
         for i in range(0, settings.submarine_count):
             submarine = ship.Ship(settings.submarine_size, self.square_size)
             submarine.move_to(self.start_square.rect.x, self.start_square.rect.y)
-            self.ships.add(submarine)
+            self.unplaced_ships.add(submarine)
         for i in range(0, settings.patrol_boat_count):
             patrol_boat = ship.Ship(settings.patrol_boat_size, self.square_size)
             patrol_boat.move_to(self.start_square.rect.x, self.start_square.rect.y)
-            self.ships.add(patrol_boat)
+            self.unplaced_ships.add(patrol_boat)
 
-        self.awaiting_ship = self.ships.get_sprite(0)
+        self.awaiting_ship = self.unplaced_ships.get_sprite(0)
         self.awaiting_ship.update_squares(self.square_group)
         self.collides = self.check_collision()
+        self.ready = False
 
     def check_events(self):
         moved = False
@@ -373,6 +356,9 @@ class Placement(Scene):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     exit()
+                if self.ready:
+                    # Return because all ships have been placed and we don't need to check movement keys anymore
+                    return
                 elif event.key == pygame.K_d:
                     print(f"Ship coords:", awaiting_ship.rect.x, awaiting_ship.rect.y)
                 elif event.key == pygame.K_r:
@@ -412,16 +398,36 @@ class Placement(Scene):
             return False
     
     def do_logic(self):
-        if len(self.ships) == 0:
-            self.scene_handler.switch(Scene.CLASH, self.screen, settings, None, self.placed_ships)
+        if self.data_sent == False and self.ready:
+            # Send locations of the placed ships to the opponent
+            pos_list = []
+            for ship in self.placed_ships:
+                for square in ship.get_squares():
+                    pos_list.append(square.pos[0])
+                    pos_list.append(square.pos[1])
+            packet = Packet(pos_list, Packet.T_SHIP_POSITIONS)
+            self.connection.send_queue.put(packet)
+            self.data_sent = True
 
+        # Check for opponents ship information
+        if self.data_received == False:
+            packet = self.connection.get_packet(Packet.T_SHIP_POSITIONS)
+            if packet != None:
+                self.enemy_ships = packet.get_data(include_header=False)
+                self.data_received = True
+
+        if self.data_sent and self.data_received:
+            self.scene_handler.switch(Scene.CLASH, self.screen, settings, self.connection, self.placed_ships, self.enemy_ships)
+           
     def draw(self):
         # Draw (order is important)
         self.screen.fill(color.GREY)
         self.grid.draw(self.screen)
 #            square_group.draw(screen)
         self.placed_ships.draw(self.screen)
-        self.awaiting_ship.draw(self.screen)
+        if not self.ready:
+            self.awaiting_ship.draw(self.screen)
+            pygame.draw.rect(self.screen, color.GREEN, self.awaiting_ship.rect, 2)
         # Draw a transparent surface on top of the colliding squares
         for s in self.colliding_squares:
             transparent_surf = pygame.Surface((s.rect.width, s.rect.height))
@@ -430,8 +436,6 @@ class Placement(Scene):
             self.screen.blit(transparent_surf, (s.rect.x, s.rect.y)) 
         # Status
         #screen.blit(status.surf, status.rect)
-        # Debug rect
-        pygame.draw.rect(self.screen, color.GREEN, self.awaiting_ship.rect, 2)
 
     def try_place(self):
         # If the position is not reserved, the ship is placed there
@@ -441,34 +445,24 @@ class Placement(Scene):
             # Reserve the squares
             self.reserved_squares.add(self.awaiting_ship.get_squares())
             # Remove the ship from awaiting ships
-            self.ships.remove(self.awaiting_ship)
-            if len(self.ships) > 0:
-                self.awaiting_ship = self.ships.get_sprite(0)
+            self.unplaced_ships.remove(self.awaiting_ship)
+            if len(self.unplaced_ships) > 0:
+                self.awaiting_ship = self.unplaced_ships.get_sprite(0)
                 self.awaiting_ship.update_squares(self.square_group)
                 self.collides = self.check_collision()
             else:
-                print("ALL SHIPS HAVE BEEN PLACED!")
+                # When all ships have been placed, set state to ready
+                self.ready = True
             return True
         else:
             return False
 
 
 class Clash(Scene):
-    def __init__(self, scene_handler, screen, settings, connection, placed_ships):
+    def __init__(self, scene_handler, screen, settings, connection, placed_ships, enemy_ships):
         self.scene_handler = scene_handler
         self.screen = screen
         self.connection = connection
-        self.placed_ships = placed_ships
-        self.enemy_shots = pygame.sprite.Group()
-        going_first = 0
-        is_host = False
-        if is_host:
-            going_first = random.randint(0, 1)
-            if going_first == 0:
-                # Send "go first" -message to the opponent
-                pass
-        self.your_turn = True
-        self.attack_done = False
         # Create the grids
         offset_x = 50
         offset_y = 50
@@ -482,16 +476,29 @@ class Clash(Scene):
         self.my_squares = self.main_grid.get_square_group(color.GREEN)
         self.enemy_squares = self.enemy_grid.get_square_group(color.GREEN)
         start_square = self.enemy_squares.sprites()[0]
+        # Create spritegroups for the ships and strikes
+        self.my_ships = placed_ships
+        self.my_strikes = pygame.sprite.Group()
+        self.enemy_ships = self.construct_enemy_ships(enemy_ships)
+        self.enemy_strikes = pygame.sprite.Group()
         # Create a crosshair
         self.crosshair = Crosshair(self.square_size)
-        self.crosshair.move(start_square.rect.x, start_square.rect.y)
+        self.crosshair.move_to(start_square.rect.x, start_square.rect.y)
         # Transform the placed ships to the new grid
-        for ship in self.placed_ships:
+        for ship in self.my_ships:
             ship.transform_squares(self.square_size, self.my_squares)
-            
+        # Decide who goes first
+        self.your_turn = True
+        going_first = 0
+        is_host = False
+        if is_host:
+            going_first = random.randint(0, 1)
+            if going_first == 0:
+                # Send "go first" -message to the opponent
+                pass
+
     def check_events(self):
         if self.your_turn:
-            self.attack_done = False
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
@@ -508,8 +515,29 @@ class Clash(Scene):
                         self.crosshair.move_left(self.square_size[0], self.enemy_grid.get_rect())
                     elif event.key == pygame.K_RETURN:
                         target_square = self.crosshair.get_square(self.enemy_squares)
+                        if self.check_hit(target_square):
+                            print("A hit!")
+                        else:
+                            print("A miss!")
                         # Send target to opponent and get a response
-                        self.attack_done = True
+
+    def check_hit(self, target_square):
+        if pygame.sprite.spritecollideany(target_square, self.enemy_ships) == None:
+            return False
+        else:
+            return True
+
+    def construct_enemy_ships(self, positions):
+        enemy_ships = pygame.sprite.Group()
+        i = 0
+        while i < len(positions):
+            pos = positions[i:i+2]
+            for square in self.enemy_squares:
+                if pos == square.pos:
+                    enemy_ships.add(square)
+            i += 2
+        print(enemy_ships)
+        return enemy_ships
 
     def do_logic(self):
         pass
@@ -519,13 +547,13 @@ class Clash(Scene):
         self.main_grid.draw(self.screen)
         self.enemy_grid.draw(self.screen)
         #self.enemy_squares.draw(self.screen)
-        self.placed_ships.draw(self.screen)
-        if len(self.enemy_shots) > 0:
-            self.enemy_shots.draw(self.screen)
+        self.my_ships.draw(self.screen)
+        if len(self.enemy_strikes) > 0:
+            self.enemy_strikes.draw(self.screen)
         if self.your_turn:
             self.crosshair.draw(self.screen)
-        if self.attack_done:
+        #if self.attack_done:
             # Draw MISS or HIT
-            self.your_turn = False
-        for s in self.placed_ships:
+        #    self.your_turn = False
+        for s in self.my_ships:
             pygame.draw.rect(self.screen, color.RED, s.rect, 1)

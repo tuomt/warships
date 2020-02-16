@@ -7,7 +7,7 @@ from networking.packet import Packet
 IP_ADDRESS = "127.0.0.1"
 PORT = 7772
 ENCODING = "utf-8"
-BUFFER_SIZE = 24
+BUFFER_SIZE = 2048
 
 class Server():
     def __init__(self):
@@ -57,35 +57,66 @@ class Server():
         self.connected = True
             
     def close(self):
-        self.send_queue.put("close")
+        self.interrupt_queue.put(True)
         self._socket.close()
         self.is_running = False
         self.connected = False
 
     def send(self, receiver):
         while True:
-            if self.send_queue.empty() == False:
-                packet = self.send_queue.get(False)
-                if packet.msg == "close":
+            # Check the interrupt queue
+            if self.interrupt_queue.empty() == False:
+                interrupt = self.interrupt_queue.get()
+                if interrupt:
                     print("Closing send-thread.")
                     return False
-                receiver.send(packet.data)
-                
+
+            if self.send_queue.empty() == False:
+                packet = self.send_queue.get(False)
+                data = packet.pack_data()
+                receiver.send(data)
+
     def receive(self, sender):
         while True:
+            # Check the interrupt queue in case we are going to shut down the connection
+            if self.interrupt_queue.empty() == False:
+                interrupt = self.interrupt_queue.get(False)
+                if interrupt:
+                    return False
+
             data = sender.recv(BUFFER_SIZE)
             if len(data) > 0:
-                print("recv data:", data)
-                packet = Packet.from_bytes(data)
+                packet = Packet(data)
                 self.recv_queue.put(packet)
-                print(f"Received: {packet.msg}")
-                if packet.msg == "close":
+                if packet.type == Packet.T_CLOSE:
                     # Inform the send-thread that the connection is closing
-                    self.send_queue.put(packet)
+                    self.interrupt_queue.put(True)
                     print("Closing receive-thread.")
                     return False
-            # Check the send queue in case we are going to shut down the connection
-            if self.send_queue.empty() == False:
-                incoming_packet = self.send_queue.get(False)
-                if incoming_packet.msg == "close":
-                    return False
+
+    def get_packet(self, packet_type=None):
+        """
+        Get a packet from the receive queue.
+        If a packet with the specified type is not found in the queue, return None.
+        If a packet_type is not provided, the first packet in the queue will be returned.
+        If there are no packets in the queue, return None.
+
+        :param int packet_type: one of the T_ prefixed constants of the Packet class
+        :return: the first packet in the queue that is of the type packet_type
+        :rtype: Packet or None
+        """
+
+        if self.recv_queue.empty() == False:
+            if packet_type == None:
+                packet = self.recv_queue.get(False)
+                return packet
+            else:
+                packet = self.recv_queue.get(False)
+                if packet.type == packet_type:
+                    return packet
+                else:
+                    # The packet type is wrong so it will be put back in the queue
+                    self.recv_queue.put(packet)
+                    return None
+        else:
+            return None

@@ -1,33 +1,83 @@
+import struct
+
 class Packet():
-    ENCODING = "utf-8"
+    # How many items are in the header
+    HEADER_LEN = 2
+    # How many bytes are in the header
+    HEADER_BYTES = 4 * HEADER_LEN
+    # Header indices in unpacked data
+    I_LEN  = 0
+    I_TYPE = 1
     # Packet types
-    T_READY = 0
-    T_SETTINGS = 1
+    T_CLOSE            = 0
+    T_READY            = 1
+    T_SHIP_POSITIONS   = 2
 
-    def __init__(self, packet_type, msg):
-        self.type = packet_type
-        self.__msg = ''
-        self.__data = 'INIT'
-        self.msg = msg
+    def __init__(self, data, packet_type=None):
+        # For incoming packets the type is initally unknown
+        # but when creating a new packet, a packet_type should be provided
+        # If packet_type is not provided the data is assumed to be in bytes format
+        self.__data = None
+        self.type = None
 
-    @property
-    def msg(self):
-        return self.__msg
+        if packet_type == None:
+            unpacked_data = self.unpack_data(data)
+            self.type = unpacked_data[self.I_TYPE]
+            self.__data = unpacked_data
+        else:
+            self.type = packet_type
+            self.set_data(data)
 
-    @msg.setter
-    def msg(self, value):
-        self.__msg = value
-        self.data = value
+    def get_data(self, include_header=True):
+        if include_header:
+            return self.__data
+        else:
+            return self.__data[self.HEADER_LEN:]
 
-    @property
-    def data(self):
-        return self.__data
+    def set_data(self, data):
+        """
+        Set the data for the packet.
+        A header will be put in front of the data.
 
-    @data.setter
-    def data(self, value):
-        self.__data = self.type.to_bytes(2, byteorder='big', signed=False)
-        self.__data += bytes(value, self.ENCODING)
+        :param list data: the data to be set
+        :return: nothing
+        :rtype: None
+        """
+        header = [None] * self.HEADER_LEN
+        header[self.I_LEN] = self.HEADER_LEN + len(data)
+        header[self.I_TYPE] = self.type
+        full_data = header
+        full_data.extend(data)
+        self.__data = full_data
+
+    def pack_data(self):
+        """
+        Convert the data into bytes.
         
-    def from_bytes(data):
-        packet_type = int.from_bytes(data[:2], byteorder='big', signed = False)
-        return Packet(packet_type, data[2:].decode(Packet.ENCODING))
+        :return: the packed data
+        :rtype: bytes
+        """
+
+        #length = self.HEADER_LEN + len(self.get_data()
+        #full_data = [length, self.type]
+        #full_data.extend(self.get_data())
+        length = len(self.__data)
+        packed_data = struct.pack(">{}i".format(length), *self.__data)
+        return packed_data
+
+    def unpack_data(self, data):
+        """
+        Convert the data into a tuple of integers.
+        
+        :param bytes data: the data to be unpacked
+        :return: the unpacked data
+        :rtype: tuple
+        """
+        # Read the size of the data from the header
+        size = int.from_bytes(data[:4], byteorder='big')
+        print("unpacking:", data)
+        print("packet size", size)
+        # Unpack
+        unpacked = struct.unpack(">{}i".format(size), data)
+        return unpacked
+
