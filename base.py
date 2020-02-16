@@ -18,7 +18,7 @@ main_grid_offset_h = 50
 main_grid_width = SCREEN_WIDTH - 2 * main_grid_offset_w
 main_grid_height = SCREEN_HEIGHT - 2 * main_grid_offset_h
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT)) 
-pygame.display.set_caption("Battleships")
+pygame.display.set_caption("Warships")
 
 # Create global objects
 clock = pygame.time.Clock()
