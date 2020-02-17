@@ -6,7 +6,7 @@ class TransformError(Exception):
 
 class GridComponent(pygame.sprite.Sprite):
     """
-    A base class for components to be placed on a grid.
+    A base class for components to be placed on a grid. Inherits Sprite.
 
     :attr tuple self.square_size: the size (width, height) of a square on the grid
     :attr pygame.Rect self.grid_rect: the rectangle of the grid's boundaries
@@ -15,6 +15,7 @@ class GridComponent(pygame.sprite.Sprite):
     :attr pygame.Rect self.rect: the rectangle of the component
     :attr str image_name: the filename of the image with the file extension included
     :attr pygame.Surface self.image: the image surface of the component
+    :parent: pygame.sprite.Sprite
     """
     def __init__(self, square_size, grid_rect, square_group, image_name):
         """ 
