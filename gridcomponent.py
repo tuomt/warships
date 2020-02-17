@@ -4,7 +4,7 @@ from os import path
 class TransformError(Exception):
     pass
 
-class GridComponent():
+class GridComponent(pygame.sprite.Sprite):
     """
     A base class for components to be placed on a grid.
 
@@ -25,6 +25,8 @@ class GridComponent():
         :param pygame.sprite.Group() square_group: the squares of the grid
         :param str image_name: the filename of the image with the file extension included
         """
+        pygame.sprite.Sprite.__init__(self)
+
         self.square_size = square_size
         self.grid_rect = grid_rect
         self.square_group = square_group
