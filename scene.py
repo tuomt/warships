@@ -8,7 +8,8 @@ import networking.server
 from networking.packet import Packet
 import color
 from crosshair import Crosshair
-
+from hitmarker import Hitmarker
+from missmarker import Missmarker
 # Initialize fonts
 title_font = pygame.freetype.SysFont("monospace", 70)
 title_font.pad = True
@@ -323,29 +324,29 @@ class Placement(Scene):
         # Normal sprite groups are not ordered, so this might return something else than the top left square
         self.start_square = self.grid.get_square((0,0))
         # Add every ship to the ships group
+        grid_rect = self.grid.get_rect()
         for i in range(0, settings.carrier_count):
-            carrier = ship.Ship(settings.carrier_size, self.square_size)
+            carrier = ship.Ship(settings.carrier_size, self.square_size, grid_rect, self.square_group)
             carrier.move_to(self.start_square.rect.x, self.start_square.rect.y)
             self.unplaced_ships.add(carrier)
         for i in range(0, settings.battleship_count):
-            battleship = ship.Ship(settings.battleship_size, self.square_size)
+            battleship = ship.Ship(settings.battleship_size, self.square_size, grid_rect, self.square_group)
             battleship.move_to(self.start_square.rect.x, self.start_square.rect.y)
             self.unplaced_ships.add(battleship)
         for i in range(0, settings.cruiser_count):
-            cruiser = ship.Ship(settings.cruiser_size, self.square_size)
+            cruiser = ship.Ship(settings.cruiser_size, self.square_size, grid_rect, self.square_group)
             cruiser.move_to(self.start_square.rect.x, self.start_square.rect.y)
             self.unplaced_ships.add(cruiser)
         for i in range(0, settings.submarine_count):
-            submarine = ship.Ship(settings.submarine_size, self.square_size)
+            submarine = ship.Ship(settings.submarine_size, self.square_size, grid_rect, self.square_group)
             submarine.move_to(self.start_square.rect.x, self.start_square.rect.y)
             self.unplaced_ships.add(submarine)
         for i in range(0, settings.patrol_boat_count):
-            patrol_boat = ship.Ship(settings.patrol_boat_size, self.square_size)
+            patrol_boat = ship.Ship(settings.patrol_boat_size, self.square_size, grid_rect, self.square_group)
             patrol_boat.move_to(self.start_square.rect.x, self.start_square.rect.y)
             self.unplaced_ships.add(patrol_boat)
 
         self.awaiting_ship = self.unplaced_ships.get_sprite(0)
-        self.awaiting_ship.update_squares(self.square_group)
         self.collides = self.check_collision()
         self.ready = False
 
@@ -365,20 +366,19 @@ class Placement(Scene):
                     self.awaiting_ship.rotate(self.grid.get_rect())
                     moved = True
                 elif event.key == pygame.K_UP:
-                    self.awaiting_ship.move_up(self.square_size[1], self.grid.get_rect())
+                    self.awaiting_ship.move_up()
                     moved = True
                 elif event.key == pygame.K_DOWN:
-                    self.awaiting_ship.move_down(self.square_size[1], self.grid.get_rect())
+                    self.awaiting_ship.move_down()
                     moved = True
                 elif event.key == pygame.K_RIGHT:
-                    self.awaiting_ship.move_right(self.square_size[0], self.grid.get_rect())
+                    self.awaiting_ship.move_right()
                     moved = True
                 elif event.key == pygame.K_LEFT:
-                    self.awaiting_ship.move_left(self.square_size[0], self.grid.get_rect())
+                    self.awaiting_ship.move_left()
                     moved = True
                 # Collisions are checked again if the ship has been moved
                 if moved:
-                    self.awaiting_ship.update_squares(self.square_group)
                     self.collides = self.check_collision()
                 elif event.key == pygame.K_RETURN:
                     self.try_place()
@@ -448,7 +448,6 @@ class Placement(Scene):
             self.unplaced_ships.remove(self.awaiting_ship)
             if len(self.unplaced_ships) > 0:
                 self.awaiting_ship = self.unplaced_ships.get_sprite(0)
-                self.awaiting_ship.update_squares(self.square_group)
                 self.collides = self.check_collision()
             else:
                 # When all ships have been placed, set state to ready
@@ -478,7 +477,8 @@ class Clash(Scene):
         start_square = self.enemy_squares.sprites()[0]
         # Create spritegroups for the ships and strikes
         self.my_ships = placed_ships
-        self.my_strikes = pygame.sprite.Group()
+        self.my_hits = pygame.sprite.Group()
+        self.my_misses = pygame.sprite.Group()
         self.enemy_ships = self.construct_enemy_ships(enemy_ships)
         self.enemy_strikes = pygame.sprite.Group()
         # Create a crosshair
@@ -486,7 +486,7 @@ class Clash(Scene):
         self.crosshair.move_to(start_square.rect.x, start_square.rect.y)
         # Transform the placed ships to the new grid
         for ship in self.my_ships:
-            ship.transform_squares(self.square_size, self.my_squares)
+            ship.transform(self.square_size, self.my_squares)
         # Decide who goes first
         self.your_turn = True
         going_first = 0
@@ -515,10 +515,19 @@ class Clash(Scene):
                         self.crosshair.move_left(self.square_size[0], self.enemy_grid.get_rect())
                     elif event.key == pygame.K_RETURN:
                         target_square = self.crosshair.get_square(self.enemy_squares)
-                        if self.check_hit(target_square):
+                        if self.check_hitcollision(target_square):
                             print("A hit!")
+                            hitmarker = Hitmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
+                            hitmarker.move_to(target_square.rect.x, target_square.rect.y)
+                            self.my_hits.add(hitmarker)
+                            #self.my_hits.add(target_square)
                         else:
                             print("A miss!")
+                            missmarker = Missmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
+                            missmarker.move_to(target_square.rect.x, target_square.rect.y)
+                            self.my_misses.add(missmarker)
+                            #self.my_misses.add(target_square)
+
                         # Send target to opponent and get a response
 
     def check_hit(self, target_square):
@@ -526,6 +535,13 @@ class Clash(Scene):
             return False
         else:
             return True
+
+    def check_hitcollision(self, target_square):
+        collision = pygame.sprite.spritecollideany(target_square, self.enemy_ships)
+        if collision != None:
+            return True
+        else:
+            return False
 
     def construct_enemy_ships(self, positions):
         enemy_ships = pygame.sprite.Group()
@@ -557,3 +573,8 @@ class Clash(Scene):
         #    self.your_turn = False
         for s in self.my_ships:
             pygame.draw.rect(self.screen, color.RED, s.rect, 1)
+        for hit in self.my_hits:
+            hit.draw(self.screen)
+        for miss in self.my_misses:
+            miss.draw(self.screen)
+
