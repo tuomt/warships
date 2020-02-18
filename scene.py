@@ -504,8 +504,6 @@ class Clash(Scene):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         exit()
-                    elif event.key == pygame.K_d:
-                        print("your_turn DEBUG")
                     elif event.key == pygame.K_UP:
                         self.crosshair.move_up(self.square_size[1], self.enemy_grid.get_rect())
                     elif event.key == pygame.K_DOWN:
