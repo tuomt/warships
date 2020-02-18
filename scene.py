@@ -483,8 +483,7 @@ class Clash(Scene):
         self.enemy_ships = self.construct_enemy_ships(enemy_ships)
         self.enemy_strikes = pygame.sprite.Group()
         # Create a crosshair
-        self.crosshair = Crosshair(self.square_size)
-        self.crosshair.move_to(start_square.rect.x, start_square.rect.y)
+        self.crosshair = Crosshair(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
         # Transform the placed ships to the new grid
         for ship in self.my_ships:
             ship.transform(self.square_size, self.my_squares)
@@ -505,18 +504,18 @@ class Clash(Scene):
                     if event.key == pygame.K_ESCAPE:
                         exit()
                     elif event.key == pygame.K_UP:
-                        self.crosshair.move_up(self.square_size[1], self.enemy_grid.get_rect())
+                        self.crosshair.move_up()
                     elif event.key == pygame.K_DOWN:
-                        self.crosshair.move_down(self.square_size[1], self.enemy_grid.get_rect())
+                        self.crosshair.move_down()
                     elif event.key == pygame.K_RIGHT:
-                        self.crosshair.move_right(self.square_size[0], self.enemy_grid.get_rect())
+                        self.crosshair.move_right()
                     elif event.key == pygame.K_LEFT:
-                        self.crosshair.move_left(self.square_size[0], self.enemy_grid.get_rect())
+                        self.crosshair.move_left()
                     elif event.key == pygame.K_RETURN:
                         self.try_strike()
 
     def try_strike(self):
-        target_square = self.crosshair.get_square(self.enemy_squares)
+        target_square = self.crosshair.get_squares().sprites()[0]
         already_struck = False
         for square in self.my_strikes:
             if square == target_square:
