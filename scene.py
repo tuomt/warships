@@ -477,6 +477,7 @@ class Clash(Scene):
         start_square = self.enemy_squares.sprites()[0]
         # Create spritegroups for the ships and strikes
         self.my_ships = placed_ships
+        self.my_strikes = pygame.sprite.Group()
         self.my_hits = pygame.sprite.Group()
         self.my_misses = pygame.sprite.Group()
         self.enemy_ships = self.construct_enemy_ships(enemy_ships)
@@ -514,27 +515,26 @@ class Clash(Scene):
                     elif event.key == pygame.K_LEFT:
                         self.crosshair.move_left(self.square_size[0], self.enemy_grid.get_rect())
                     elif event.key == pygame.K_RETURN:
-                        target_square = self.crosshair.get_square(self.enemy_squares)
-                        if self.check_hitcollision(target_square):
-                            print("A hit!")
-                            hitmarker = Hitmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
-                            hitmarker.move_to(target_square.rect.x, target_square.rect.y)
-                            self.my_hits.add(hitmarker)
-                            #self.my_hits.add(target_square)
-                        else:
-                            print("A miss!")
-                            missmarker = Missmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
-                            missmarker.move_to(target_square.rect.x, target_square.rect.y)
-                            self.my_misses.add(missmarker)
-                            #self.my_misses.add(target_square)
+                        self.try_strike()
 
-                        # Send target to opponent and get a response
+    def try_strike(self):
+        target_square = self.crosshair.get_square(self.enemy_squares)
+        already_struck = False
+        for square in self.my_strikes:
+            if square == target_square:
+                already_struck = True
+                break
 
-    def check_hit(self, target_square):
-        if pygame.sprite.spritecollideany(target_square, self.enemy_ships) == None:
-            return False
-        else:
-            return True
+        if not already_struck:
+            self.my_strikes.add(target_square)
+            if self.check_hitcollision(target_square):
+                hitmarker = Hitmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
+                hitmarker.move_to(target_square.rect.x, target_square.rect.y)
+                self.my_hits.add(hitmarker)
+            else:
+                missmarker = Missmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
+                missmarker.move_to(target_square.rect.x, target_square.rect.y)
+                self.my_misses.add(missmarker)
 
     def check_hitcollision(self, target_square):
         collision = pygame.sprite.spritecollideany(target_square, self.enemy_ships)
