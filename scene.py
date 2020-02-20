@@ -515,6 +515,12 @@ class Clash(Scene):
                         self.try_strike()
 
     def try_strike(self):
+        """
+        Try to strike a square on the grid.
+
+        :return: True if the strike was done, False if the position had already been struck
+        :rtype: bool
+        """
         target_square = self.crosshair.get_squares().sprites()[0]
         already_struck = False
         for square in self.my_strikes:
@@ -522,7 +528,9 @@ class Clash(Scene):
                 already_struck = True
                 break
 
-        if not already_struck:
+        if already_struck:
+            return False
+        else:
             self.my_strikes.add(target_square)
             if self.check_hitcollision(target_square):
                 hitmarker = Hitmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
@@ -532,6 +540,7 @@ class Clash(Scene):
                 missmarker = Missmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
                 missmarker.move_to(target_square.rect.x, target_square.rect.y)
                 self.my_misses.add(missmarker)
+            return True
 
     def check_hitcollision(self, target_square):
         collision = pygame.sprite.spritecollideany(target_square, self.enemy_ships)
