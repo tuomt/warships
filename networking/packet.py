@@ -12,6 +12,8 @@ class Packet():
     T_CLOSE            = 0
     T_READY            = 1
     T_SHIP_POSITIONS   = 2
+    T_STRIKE           = 3
+    T_STRIKE_RESULT    = 4
 
     def __init__(self, data, packet_type=None):
         # For incoming packets the type is initally unknown
