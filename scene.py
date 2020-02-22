@@ -468,11 +468,11 @@ class Clash(Scene):
         width = (SCREEN_WIDTH - 3 * offset_x) / 2
         #height = SCREEN_HEIGHT - 2 * offset_y
         height = SCREEN_HEIGHT / 2
-        self.main_grid = grid.Grid((offset_x, offset_y, width, height), settings.rows, settings.columns, 2, color.BLACK)
+        self.my_grid = grid.Grid((offset_x, offset_y, width, height), settings.rows, settings.columns, 2, color.BLACK)
         enemy_offset_x = offset_x + width + offset_x
         self.enemy_grid = grid.Grid((enemy_offset_x, offset_y, width, height), settings.rows, settings.columns, 2, color.BLACK)
-        self.square_size = self.main_grid.get_square_size_abs()
-        self.my_squares = self.main_grid.get_square_group(color.GREEN)
+        self.square_size = self.my_grid.get_square_size_abs()
+        self.my_squares = self.my_grid.get_square_group(color.GREEN)
         self.enemy_squares = self.enemy_grid.get_square_group(color.GREEN)
         start_square = self.enemy_squares.sprites()[0]
         # Create spritegroups for the ships and strikes
@@ -482,6 +482,8 @@ class Clash(Scene):
         self.my_misses = pygame.sprite.Group()
         self.enemy_ships = self.construct_enemy_ships(enemy_ships)
         self.enemy_strikes = pygame.sprite.Group()
+        self.enemy_hits = pygame.sprite.Group()
+        self.enemy_misses = pygame.sprite.Group()
         # Create a crosshair
         self.crosshair = Crosshair(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
         # Transform the placed ships to the new grid
@@ -498,12 +500,12 @@ class Clash(Scene):
                 pass
 
     def check_events(self):
-        if self.your_turn:
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        exit()
-                    elif event.key == pygame.K_UP:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    exit()
+                if self.your_turn:
+                    if event.key == pygame.K_UP:
                         self.crosshair.move_up()
                     elif event.key == pygame.K_DOWN:
                         self.crosshair.move_down()
@@ -512,7 +514,14 @@ class Clash(Scene):
                     elif event.key == pygame.K_LEFT:
                         self.crosshair.move_left()
                     elif event.key == pygame.K_RETURN:
-                        self.try_strike()
+                        if self.try_strike():
+                            target_square = self.crosshair.get_squares().sprites()[0]
+                            self.my_strikes.add(target_square)
+                            strike_pos = target_square.pos
+                            # Send the strike coordinates to opponent
+                            strike_packet = Packet(strike_pos, Packet.T_STRIKE)
+                            self.connection.send_queue.put(strike_packet)
+                            self.your_turn = False
 
     def try_strike(self):
         """
@@ -531,15 +540,6 @@ class Clash(Scene):
         if already_struck:
             return False
         else:
-            self.my_strikes.add(target_square)
-            if self.check_hitcollision(target_square):
-                hitmarker = Hitmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
-                hitmarker.move_to(target_square.rect.x, target_square.rect.y)
-                self.my_hits.add(hitmarker)
-            else:
-                missmarker = Missmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
-                missmarker.move_to(target_square.rect.x, target_square.rect.y)
-                self.my_misses.add(missmarker)
             return True
 
     def check_hitcollision(self, target_square):
@@ -561,12 +561,77 @@ class Clash(Scene):
         print(enemy_ships)
         return enemy_ships
 
+    def get_square_in_coordinates(self, square_group, position):
+        position = tuple(position)
+        for square in square_group:
+            if square.pos == position:
+                return square
+
+    def evaluate_enemy_strike(self, strike_pos):
+        """
+        Check whether the enemy strike hit any of our ships.
+
+        :param tuple strike_pos: the position where the enemy strike hit in grid coordinates (x, y)
+        :return: 1 if the strike hit our ship, 0 if the strike missed
+        :rtype: int
+        """
+        hit = False
+        target_square = self.get_square_in_coordinates(self.my_squares, strike_pos)
+        for ship in self.my_ships:
+            for square in ship.get_squares():
+                if square.pos == strike_pos:
+                    hit = True
+            
+        if hit:
+            hitmarker = Hitmarker(self.square_size, self.my_grid.get_rect(), self.my_squares)
+            hitmarker.move_to(target_square.rect.x, target_square.rect.y)
+            self.enemy_hits.add(hitmarker)
+            return 1
+        else:
+            missmarker = Missmarker(self.square_size, self.my_grid.get_rect(), self.my_squares)
+            missmarker.move_to(target_square.rect.x, target_square.rect.y)
+            self.enemy_misses.add(missmarker)
+            return 0
+
+    def check_strike_result(self, data):
+        """
+        Check the result of our own strike given by the opponent. 
+        Add a hitmarker or missmarker on the enemy grid depending on the result.
+
+        :param list data: data of the result packet
+        """
+        result = data[0]
+        strike_pos = [data[1], data[2]]
+        target_square = self.get_square_in_coordinates(self.enemy_squares, strike_pos)
+        if result == 1:
+            hitmarker = Hitmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
+            hitmarker.move_to(target_square.rect.x, target_square.rect.y)
+            self.my_hits.add(hitmarker)
+        else:
+            missmarker = Missmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
+            missmarker.move_to(target_square.rect.x, target_square.rect.y)
+            self.my_misses.add(missmarker)
+
     def do_logic(self):
-        pass
+        # Enemy strike
+        enemy_strike_packet = self.connection.get_packet(Packet.T_STRIKE)
+        if enemy_strike_packet != None:
+            strike_pos = enemy_strike_packet.get_data(include_header=False)
+            result = self.evaluate_enemy_strike(tuple(strike_pos))
+            data = [result, strike_pos[0], strike_pos[1]]
+            enemy_result_packet = Packet(data, Packet.T_STRIKE_RESULT)
+            self.connection.send_queue.put(enemy_result_packet)
+            self.your_turn = True
+
+        # Result of own strike
+        result_packet = self.connection.get_packet(Packet.T_STRIKE_RESULT)
+        if result_packet != None:
+            data = result_packet.get_data(include_header=False)
+            self.check_strike_result(data)
 
     def draw(self):
         self.screen.fill(color.GREY)
-        self.main_grid.draw(self.screen)
+        self.my_grid.draw(self.screen)
         self.enemy_grid.draw(self.screen)
         #self.enemy_squares.draw(self.screen)
         self.my_ships.draw(self.screen)
@@ -574,13 +639,9 @@ class Clash(Scene):
             self.enemy_strikes.draw(self.screen)
         if self.your_turn:
             self.crosshair.draw(self.screen)
-        #if self.attack_done:
-            # Draw MISS or HIT
-        #    self.your_turn = False
         for s in self.my_ships:
             pygame.draw.rect(self.screen, color.RED, s.rect, 1)
-        for hit in self.my_hits:
-            hit.draw(self.screen)
-        for miss in self.my_misses:
-            miss.draw(self.screen)
-
+        self.my_hits.draw(self.screen)
+        self.my_misses.draw(self.screen)
+        self.enemy_hits.draw(self.screen)
+        self.enemy_misses.draw(self.screen)
