@@ -488,7 +488,7 @@ class Clash(Scene):
         for ship in self.my_ships:
             ship.transform(self.square_size, self.my_squares)
         # Decide who goes first
-        self.my_turn = True
+        self.your_turn = True
         going_first = 0
         is_host = False
         if is_host:
@@ -498,7 +498,7 @@ class Clash(Scene):
                 pass
 
     def check_events(self):
-        if self.my_turn:
+        if self.your_turn:
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
@@ -512,12 +512,7 @@ class Clash(Scene):
                     elif event.key == pygame.K_LEFT:
                         self.crosshair.move_left()
                     elif event.key == pygame.K_RETURN:
-                        if self.try_strike():
-                            # If the strike was completed, send a message to the opponent
-                            # that the turn is over.
-                            end_turn = Packet([1], Packet.T_END_TURN)
-                            self.connection.send_queue.put(end_turn)
-                            self.my_turn = False
+                        self.try_strike()
 
     def try_strike(self):
         """
@@ -567,8 +562,7 @@ class Clash(Scene):
         return enemy_ships
 
     def do_logic(self):
-        if self.connection.get_packet(Packet.T_END_TURN) != None:
-            self.my_turn = True
+        pass
 
     def draw(self):
         self.screen.fill(color.GREY)
@@ -578,11 +572,11 @@ class Clash(Scene):
         self.my_ships.draw(self.screen)
         if len(self.enemy_strikes) > 0:
             self.enemy_strikes.draw(self.screen)
-        if self.my_turn:
+        if self.your_turn:
             self.crosshair.draw(self.screen)
         #if self.attack_done:
             # Draw MISS or HIT
-        #    self.my_turn = False
+        #    self.your_turn = False
         for s in self.my_ships:
             pygame.draw.rect(self.screen, color.RED, s.rect, 1)
         for hit in self.my_hits:
