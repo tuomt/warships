@@ -122,6 +122,8 @@ class GridComponent(pygame.sprite.Sprite):
         :return: None-object
         :rtype: None
         """
+        # Update square group
+        self.square_group = new_squares
         # Get the position of the ship's first square
         ship_pos = self.get_squares().sprites()[0].pos
         # Scale the ship's image to fit the new squares
