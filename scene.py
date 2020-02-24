@@ -602,7 +602,7 @@ class Clash(Scene):
                 game_over = Packet([1], Packet.T_GAME_OVER)
                 self.connection.send_queue.put(game_over)
                 self.draw()
-                self.scene_handler.switch(Scene.END, self.scene_handler, self.screen, self.connection)
+                self.scene_handler.switch(Scene.END, self.screen, self.settings, self.connection)
             else:
                 self.your_turn = True
 
@@ -616,7 +616,7 @@ class Clash(Scene):
         if game_over_packet != None:
             self.draw()
             print("Victory!")
-            self.scene_handler.switch(Scene.END, self.scene_handler, self.screen, self.connection)
+            self.scene_handler.switch(Scene.END, self.screen, self.settings, self.connection)
 
     def draw(self):
         self.screen.fill(color.GREY)
