@@ -47,6 +47,8 @@ class SceneHandler():
             self.scene = Placement(self, *args)
         elif dest == Scene.CLASH:
             self.scene = Clash(self, *args)
+        elif dest == Scene.END:
+            self.scene = End(self, *args)
 
 class Scene():
     MAIN_MENU         = 1
@@ -56,6 +58,7 @@ class Scene():
     WAIT_CONNECT_MENU = 5
     PLACEMENT         = 6
     CLASH             = 7
+    END               = 8
 
     def __init__(self):
         raise NotImplementedError
@@ -461,6 +464,7 @@ class Clash(Scene):
     def __init__(self, scene_handler, screen, settings, connection, placed_ships, enemy_ships):
         self.scene_handler = scene_handler
         self.screen = screen
+        self.settings = settings
         self.connection = connection
         # Create the grids
         offset_x = 50
@@ -621,13 +625,27 @@ class Clash(Scene):
             data = [result, strike_pos[0], strike_pos[1]]
             enemy_result_packet = Packet(data, Packet.T_STRIKE_RESULT)
             self.connection.send_queue.put(enemy_result_packet)
-            self.your_turn = True
+            # Check if our fleet has been destroyed
+            if len(self.enemy_hits) == self.settings.total_reserved_squares:
+                # Send game over message
+                game_over = Packet([1], Packet.T_GAME_OVER)
+                self.connection.send_queue.put(game_over)
+                self.draw()
+                self.scene_handler.switch(Scene.END, self.scene_handler, self.screen, self.connection)
+            else:
+                self.your_turn = True
 
         # Result of own strike
         result_packet = self.connection.get_packet(Packet.T_STRIKE_RESULT)
         if result_packet != None:
             data = result_packet.get_data(include_header=False)
             self.check_strike_result(data)
+
+        game_over_packet = self.connection.get_packet(Packet.T_GAME_OVER)
+        if game_over_packet != None:
+            self.draw()
+            print("Victory!")
+            self.scene_handler.switch(Scene.END, self.scene_handler, self.screen, self.connection)
 
     def draw(self):
         self.screen.fill(color.GREY)
@@ -645,3 +663,22 @@ class Clash(Scene):
         self.my_misses.draw(self.screen)
         self.enemy_hits.draw(self.screen)
         self.enemy_misses.draw(self.screen)
+
+class End(Scene):
+    def __init__(self, scene_handler, screen, settings, connection):
+        self.scene_handler = scene_handler
+        self.screen = screen
+        self.settings = settings
+        self.connection = connection
+
+    def check_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    exit()
+
+    def do_logic(self):
+        pass
+
+    def draw(self):
+        pass
