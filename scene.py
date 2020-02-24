@@ -306,9 +306,8 @@ class Placement(Scene):
         self.scene_handler = scene_handler
         self.screen = screen
         self.connection = connection
-        self.data_sent = False
-        self.data_received = False
-        self.enemy_ships = None
+        self.ready_msg_sent = False
+        self.ready_msg_received = False
         # Create a game grid
         grid_offset_w = 50
         grid_offset_h = 50
@@ -401,26 +400,18 @@ class Placement(Scene):
             return False
     
     def do_logic(self):
-        if self.data_sent == False and self.ready:
-            # Send locations of the placed ships to the opponent
-            pos_list = []
-            for ship in self.placed_ships:
-                for square in ship.get_squares():
-                    pos_list.append(square.pos[0])
-                    pos_list.append(square.pos[1])
-            packet = Packet(pos_list, Packet.T_SHIP_POSITIONS)
+        if self.ready_msg_sent == False and self.ready:
+            packet = Packet([1], Packet.T_READY)
             self.connection.send_queue.put(packet)
-            self.data_sent = True
+            self.ready_msg_sent = True
 
-        # Check for opponents ship information
-        if self.data_received == False:
-            packet = self.connection.get_packet(Packet.T_SHIP_POSITIONS)
-            if packet != None:
-                self.enemy_ships = packet.get_data(include_header=False)
-                self.data_received = True
+        if self.ready_msg_received == False:
+            ready_packet = self.connection.get_packet(Packet.T_READY)
+            if ready_packet != None:
+                self.ready_msg_received = True
 
-        if self.data_sent and self.data_received:
-            self.scene_handler.switch(Scene.CLASH, self.screen, settings, self.connection, self.placed_ships, self.enemy_ships)
+        if self.ready_msg_sent and self.ready_msg_received:
+            self.scene_handler.switch(Scene.CLASH, self.screen, settings, self.connection, self.placed_ships)
            
     def draw(self):
         # Draw (order is important)
@@ -461,7 +452,7 @@ class Placement(Scene):
 
 
 class Clash(Scene):
-    def __init__(self, scene_handler, screen, settings, connection, placed_ships, enemy_ships):
+    def __init__(self, scene_handler, screen, settings, connection, placed_ships):
         self.scene_handler = scene_handler
         self.screen = screen
         self.settings = settings
@@ -484,7 +475,6 @@ class Clash(Scene):
         self.my_strikes = pygame.sprite.Group()
         self.my_hits = pygame.sprite.Group()
         self.my_misses = pygame.sprite.Group()
-        self.enemy_ships = self.construct_enemy_ships(enemy_ships)
         self.enemy_strikes = pygame.sprite.Group()
         self.enemy_hits = pygame.sprite.Group()
         self.enemy_misses = pygame.sprite.Group()
@@ -545,25 +535,6 @@ class Clash(Scene):
             return False
         else:
             return True
-
-    def check_hitcollision(self, target_square):
-        collision = pygame.sprite.spritecollideany(target_square, self.enemy_ships)
-        if collision != None:
-            return True
-        else:
-            return False
-
-    def construct_enemy_ships(self, positions):
-        enemy_ships = pygame.sprite.Group()
-        i = 0
-        while i < len(positions):
-            pos = positions[i:i+2]
-            for square in self.enemy_squares:
-                if pos == square.pos:
-                    enemy_ships.add(square)
-            i += 2
-        print(enemy_ships)
-        return enemy_ships
 
     def get_square_in_coordinates(self, square_group, position):
         position = tuple(position)
