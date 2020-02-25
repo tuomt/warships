@@ -54,7 +54,7 @@ class Client():
         self.connected = True
             
     def close(self):
-        self.send_queue.put("close")
+        self.interrupt_queue.put(True)
         self._socket.close()
         self._socket = None
         self.connected = False
