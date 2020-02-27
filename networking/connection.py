@@ -7,17 +7,19 @@ from networking.packet import Packet
 BUFFER_SIZE = 2048
 
 class Connection():
+    """
+    Derived classes have to implement self._start() and override self.socket with a local endpoint.
+
+    :attr bool self.connected: is the connection established
+    :attr socket.socket self.socket: local socket endpoint
+    :attr queue.Queue self.recv_queue: queue for packets to be sent
+    :attr queue.Queue self.send_queue: queue for received packets
+    :attr queue.Queue self._interrupt_queue: queue for interrupting the connection
+    :attr queue.Queue self._closure_queue: queue used when closing the connection
+    """
     def __init__(self):
         """
         The constructor. 
-        Derived classes have to implement self._start() and override self.socket with a local endpoint.
-
-        :attr bool self.connected: is the connection established
-        :attr socket.socket self.socket: local socket endpoint
-        :attr queue.Queue self.recv_queue: queue for packets to be sent
-        :attr queue.Queue self.send_queue: queue for received packets
-        :attr queue.Queue self._interrupt_queue: queue for interrupting the connection
-        :attr queue.Queue self._closure_queue: queue used when closing the connection
         """
         self.connected = False
         self.socket = None

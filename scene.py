@@ -152,7 +152,6 @@ class HostMenu(Scene, menu.Menu):
         selectables = [self.ip_box, self.port_box, self.settings_btn, self.start_btn, self.back_btn]
         # Create the menu and draw it
         menu.Menu.__init__(self, [self.title], selectables)
-        connection = networking.server.Server()
 
     def check_events(self):
         selected = self.check_menu_events()
@@ -197,7 +196,7 @@ class WaitHostMenu(Scene, menu.Menu):
         selected = self.check_menu_events()
         if selected != None:
             # Stop the connection effort
-            self.connection.interrupt_queue.put(True)
+            self.connection.close()
             self.scene_handler.switch(Scene.HOST_MENU, self.screen, self.ip, self.port)
 
     def do_logic(self):
@@ -295,7 +294,7 @@ class WaitConnectMenu(Scene, menu.Menu):
         # Cancel button or escape is pressed
         if selected != None:
             # Stop the connection effort
-            self.connection.interrupt_queue.put(True)
+            self.connection.close()
             self.scene_handler.switch(Scene.CONNECT_MENU, self.screen, self.ip, self.port)
 
     def draw(self):
@@ -400,6 +399,16 @@ class Placement(Scene):
             return False
     
     def do_logic(self):
+        # Check if the connection was closed
+        controlled_closure = self.connection.check_closure()
+        if controlled_closure != None:
+            if controlled_closure:
+                msg = "The connection was closed by the opponent."
+            else:
+                msg = "The connection was closed unexpectedly."
+            print(msg)
+            self.scene_handler.switch(Scene.MAIN_MENU, self.screen)
+
         if self.ready_msg_sent == False and self.ready:
             packet = Packet([1], Packet.T_READY)
             self.connection.send_queue.put(packet)
@@ -588,6 +597,16 @@ class Clash(Scene):
             self.my_misses.add(missmarker)
 
     def do_logic(self):
+        # Check if the connection was closed
+        controlled_closure = self.connection.check_closure()
+        if controlled_closure != None:
+            if controlled_closure:
+                msg = "The connection was closed by the opponent."
+            else:
+                msg = "The connection was closed unexpectedly."
+            print(msg)
+            self.scene_handler.switch(Scene.MAIN_MENU, self.screen)
+
         # Enemy strike
         enemy_strike_packet = self.connection.get_packet(Packet.T_STRIKE)
         if enemy_strike_packet != None:
@@ -636,20 +655,47 @@ class Clash(Scene):
         self.enemy_misses.draw(self.screen)
 
 class End(Scene):
+    class EndMenu(menu.Menu):
+        def __init__(self, screen):
+            self.screen = screen
+            popup_offset_x = 500
+            popup_offset_y = 450
+            pop_rect = pygame.Rect(popup_offset_x, popup_offset_y, 300, 200)
+            center = pop_rect.center
+            self.play_again_btn = menu.Button("Play again", font)
+            self.play_again_btn.rect.center = center
+            self.play_again_btn.rect.y -= 50
+            self.exit_btn = menu.Button("Exit to menu", font)
+            self.exit_btn.rect.center = center
+            self.exit_btn.rect.y += 50
+            menu.Menu.__init__(self, [], [self.play_again_btn, self.exit_btn], pop_rect, color.BLUE_GREY)
+
     def __init__(self, scene_handler, screen, settings, connection):
         self.scene_handler = scene_handler
         self.screen = screen
         self.settings = settings
         self.connection = connection
+        self.menu = self.EndMenu(self.screen)
 
     def check_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    exit()
+        selection = self.menu.check_menu_events()
+        if selection == -1:
+            exit()
 
+        if selection == self.menu.exit_btn:
+            self.connection.close()
+            self.scene_handler.switch(Scene.MAIN_MENU, self.screen)
+        
     def do_logic(self):
-        pass
+        controlled_closure = self.connection.check_closure()
+        if controlled_closure != None:
+            if controlled_closure:
+                msg = "The connection was closed by the opponent."
+            else:
+                msg = "The connection was closed unexpectedly."
+            print(msg)
+            self.scene_handler.switch(Scene.MAIN_MENU, self.screen)
 
     def draw(self):
+        self.menu.draw_components()
         pass
