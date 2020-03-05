@@ -22,10 +22,12 @@ class Packet():
         # If packet_type is not provided the data is assumed to be in bytes format
         self.__data = None
         self.type = None
+        self.length = None
 
         if packet_type == None:
             unpacked_data = self.unpack_data(data)
             self.type = unpacked_data[self.I_TYPE]
+            self.length = len(unpacked_data)
             self.__data = unpacked_data
         else:
             self.type = packet_type
@@ -46,11 +48,13 @@ class Packet():
         :return: nothing
         :rtype: None
         """
+        length = self.HEADER_LEN + len(data)
         header = [None] * self.HEADER_LEN
-        header[self.I_LEN] = self.HEADER_LEN + len(data)
+        header[self.I_LEN] = length
         header[self.I_TYPE] = self.type
         full_data = header
         full_data.extend(data)
+        self.length = length
         self.__data = full_data
 
     def pack_data(self):
@@ -60,12 +64,7 @@ class Packet():
         :return: the packed data
         :rtype: bytes
         """
-
-        #length = self.HEADER_LEN + len(self.get_data()
-        #full_data = [length, self.type]
-        #full_data.extend(self.get_data())
-        length = len(self.__data)
-        packed_data = struct.pack(">{}i".format(length), *self.__data)
+        packed_data = struct.pack(">{}i".format(self.length), *self.__data)
         return packed_data
 
     def unpack_data(self, data):
