@@ -27,6 +27,7 @@ class Connection():
         self.send_queue = Queue()
         self._interrupt_queue = Queue()
         self._closure_queue = Queue()
+        self._incomplete_packet = None
     
     def create(self, ip, port):
         """
@@ -136,22 +137,32 @@ class Connection():
                 data = sender.recv(BUFFER_SIZE)
                 if len(data) > 0:
                     packet = Packet(data)
-                    if packet.type == Packet.T_CLOSE:
-                        print("data:", packet.get_data(include_header=False))
-                        if packet.get_data(include_header=False)[0] == 0:
-                            # Initiator
-                            initiator = False
-                        else:
-                            initiator = True
-                        # Send the close packet back
-                        self._controlled_closure(sender, initiator)
-                        # Inform the send-thread that the connection is closing
-                        self._interrupt_queue.put(True)
-                        sleep(1)
-                        self.socket.close()
-                        print("Closing recv-thread")
-                        return
-                    self.recv_queue.put(packet)
+                    print("real size:", len(data) / 4)
+                    print("packet type:", packet.type)
+
+                    if self._incomplete_packet != None:
+                        packet = self._fill_incomplete_packet(Packet)
+
+                    if not self._incomplete_packet:
+                        if len(packet.get_data()) < packet.length:
+                            self._incomplete_packet = packet
+
+                        if packet.type == Packet.T_CLOSE:
+                            #print("data:", packet.get_data(include_header=False))
+                            if packet.get_data(include_header=False)[0] == 0:
+                                # Initiator
+                                initiator = False
+                            else:
+                                initiator = True
+                            # Send the close packet back
+                            self._controlled_closure(sender, initiator)
+                            # Inform the send-thread that the connection is closing
+                            self._interrupt_queue.put(True)
+                            sleep(1)
+                            self.socket.close()
+                            print("Closing recv-thread")
+                            return
+                        self.recv_queue.put(packet)
             except timeout:
                 pass
             except OSError:
@@ -159,6 +170,17 @@ class Connection():
                 self._interrupt_queue.put(False)
                 self._uncontrolled_closure()
                 return
+
+    def _fill_incomplete_packet(self, packet):
+        incomplete_data = self._incomplete_packet.get_data(include_header=False)
+        incomplete_length = self._incomplete_packet.length
+        full_length = incomplete_length
+        updated_data = incomplete_data.extend(packet.get_data(include_header=False))
+        if packet.length + incomplete_length < full_length:
+            self._incomplete_packet = Packet(updated_data)
+        else:
+            self._incomplete_packet = None
+        return Packet(updated_data)
 
     def get_packet(self, packet_type=None):
         """
