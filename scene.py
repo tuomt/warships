@@ -287,6 +287,10 @@ class WaitConnectMenu(Scene, menu.Menu):
     def do_logic(self):
         if self.connection.connected:
             self.scene_handler.switch(Scene.PLACEMENT, self.screen, settings, self.connection)
+        
+        if self.connection.check_closure() != None:
+            print("Failed to connect!")
+            self.scene_handler.switch(Scene.CONNECT_MENU, self.screen, self.ip, self.port)
 
     def check_events(self):
         selected = self.check_menu_events()
