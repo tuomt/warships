@@ -21,14 +21,13 @@ class Client(Connection):
                     self.socket.close()
                     self.socket = None
                     return
-                try:
-                    self.socket.connect((ip, port))
-                    print(f"Connected to {ip}:{port}")
-                except OSError:
-                    print("Connection effor failed!")
-                    return
+                self.socket.connect((ip, port))
+                print(f"Connected to {ip}:{port}")
                 break
             except socket.timeout:
                 pass
+            except ConnectionRefusedError:
+                self._closure_queue.put(False)
+                return
             
         self.start_send_recv(self.socket)
