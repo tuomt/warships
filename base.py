@@ -27,10 +27,6 @@ reserved_squares = pygame.sprite.Group()
 main_grid = grid.Grid((main_grid_offset_w, main_grid_offset_h, main_grid_width, main_grid_height), settings.rows, settings.columns, 2, color.BLACK)
 square_group = main_grid.get_square_group(color.GREEN)
 
-# TODO: when error is caught and game is halted, close all threads
-#test_packet = Packet(0, "TESTI")
-#print("test_packet.data", test_packet.data)
-
 class Game():
     def __init__(self):
         pass
