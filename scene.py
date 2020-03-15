@@ -74,10 +74,9 @@ class Scene():
 
 class MainMenu(Scene, menu.Menu):
     def __init__(self, scene_handler, screen):
-        self.screen = screen
         self.scene_handler = scene_handler
         # Get center of the screen
-        center = self.screen.get_rect().center
+        center = screen.get_rect().center
         # Create labels
         self.title = menu.Label("MAIN", title_font, color.BLACK, color.GREY)
         self.title.rect.center = center
@@ -96,7 +95,7 @@ class MainMenu(Scene, menu.Menu):
         self.test_btn.rect.y += 200
         buttons = [self.host_btn, self.connect_btn, self.exit_btn, self.test_btn]
         # Pass created components to the menu base class
-        menu.Menu.__init__(self, [self.title], buttons)
+        menu.Menu.__init__(self, screen, [self.title], buttons)
 
     def check_events(self):
         selected = self.check_menu_events()
@@ -119,7 +118,6 @@ class MainMenu(Scene, menu.Menu):
 class HostMenu(Scene, menu.Menu):
     def __init__(self, scene_handler, screen, ip=None, port=None):
         self.scene_handler = scene_handler
-        self.screen = screen
         if ip == None:
             self.ip = "IP Address"
         else:
@@ -128,7 +126,7 @@ class HostMenu(Scene, menu.Menu):
             self.port = "Port"
         else:
             self.port = port
-        center = self.screen.get_rect().center
+        center = screen.get_rect().center
         # Create labels
         self.title = menu.Label("HOST A SERVER", title_font, color.BLACK, color.GREY)
         self.title.rect.center = center
@@ -151,7 +149,7 @@ class HostMenu(Scene, menu.Menu):
         self.port_box.rect.y -= 75
         selectables = [self.ip_box, self.port_box, self.settings_btn, self.start_btn, self.back_btn]
         # Create the menu and draw it
-        menu.Menu.__init__(self, [self.title], selectables)
+        menu.Menu.__init__(self, screen, [self.title], selectables)
 
     def check_events(self):
         selected = self.check_menu_events()
@@ -173,10 +171,9 @@ class HostMenu(Scene, menu.Menu):
 class WaitHostMenu(Scene, menu.Menu):
     def __init__(self, scene_handler, screen, ip, port):
         self.scene_handler = scene_handler
-        self.screen = screen
         self.ip = ip
         self.port = port
-        center = self.screen.get_rect().center
+        center = screen.get_rect().center
         self.title = menu.Label("Waiting for a client...", font, color.BLACK, color.BLUE_GREY)
         self.title.rect.center = center
         self.title.rect.y = 150
@@ -186,7 +183,7 @@ class WaitHostMenu(Scene, menu.Menu):
         popup_offset_x = 100
         popup_offset_y = 100
         pop_rect = pygame.Rect(popup_offset_x, popup_offset_y, SCREEN_WIDTH - popup_offset_x * 2, SCREEN_HEIGHT - popup_offset_y * 2)
-        menu.Menu.__init__(self, [self.title], [self.cancel_btn], pop_rect, color.BLUE_GREY)
+        menu.Menu.__init__(self, screen, [self.title], [self.cancel_btn], pop_rect, color.BLUE_GREY)
         # Create the connection
         self.connection = networking.server.Server()
         server_thread = self.connection.create(ip, port)
@@ -210,7 +207,6 @@ class WaitHostMenu(Scene, menu.Menu):
 class ConnectMenu(Scene, menu.Menu):
     def __init__(self, scene_handler, screen, ip=None, port=None):
         self.scene_handler = scene_handler
-        self.screen = screen
         if ip == None:
             self.ip = "Ip Address"
         else:
@@ -219,7 +215,7 @@ class ConnectMenu(Scene, menu.Menu):
             self.port = "Port"
         else:
             self.port = port
-        center = self.screen.get_rect().center
+        center = screen.get_rect().center
         # Create a title
         self.title = menu.Label("CONNECT", title_font, color.BLACK, color.GREY)
         self.title.rect.center = center
@@ -239,7 +235,7 @@ class ConnectMenu(Scene, menu.Menu):
         self.port_box.rect.y -= 75
         selectables = [self.ip_box, self.port_box, self.connect_btn, self.back_btn]
         # Create the menu and draw it
-        menu.Menu.__init__(self, [self.title], selectables)
+        menu.Menu.__init__(self, screen, [self.title], selectables)
 
     def check_events(self):
         selected = self.check_menu_events()
@@ -264,11 +260,10 @@ class ConnectMenu(Scene, menu.Menu):
 class WaitConnectMenu(Scene, menu.Menu):
     def __init__(self, scene_handler, screen, ip, port):
         self.scene_handler = scene_handler
-        self.screen = screen
         self.settings = None
         self.ip = ip
         self.port = port
-        center = self.screen.get_rect().center
+        center = screen.get_rect().center
         self.title = menu.Label("Awaiting response from server...", font, color.BLACK, color.BLUE_GREY)
         self.title.rect.center = center
         self.title.rect.y = 150
@@ -278,7 +273,7 @@ class WaitConnectMenu(Scene, menu.Menu):
         self.cancel_btn.rect.center = center
         self.cancel_btn.rect.y = 400
         pop_rect = pygame.Rect(popup_offset_x, popup_offset_y, SCREEN_WIDTH - popup_offset_x * 2, SCREEN_HEIGHT - popup_offset_y * 2)
-        menu.Menu.__init__(self, [self.title], [self.cancel_btn], pop_rect, color.BLUE_GREY)
+        menu.Menu.__init__(self, screen, [self.title], [self.cancel_btn], pop_rect, color.BLUE_GREY)
         # Create the connection
         self.connection = networking.client.Client()
         client_thread = self.connection.create(ip, port)
@@ -661,7 +656,6 @@ class Clash(Scene):
 class End(Scene):
     class EndMenu(menu.Menu):
         def __init__(self, screen):
-            self.screen = screen
             popup_offset_x = 500
             popup_offset_y = 450
             pop_rect = pygame.Rect(popup_offset_x, popup_offset_y, 300, 200)
@@ -672,14 +666,14 @@ class End(Scene):
             self.exit_btn = menu.Button("Exit to menu", font)
             self.exit_btn.rect.center = center
             self.exit_btn.rect.y += 50
-            menu.Menu.__init__(self, [], [self.play_again_btn, self.exit_btn], pop_rect, color.BLUE_GREY)
+            menu.Menu.__init__(self, screen, [], [self.play_again_btn, self.exit_btn], pop_rect, color.BLUE_GREY)
 
     def __init__(self, scene_handler, screen, settings, connection):
         self.scene_handler = scene_handler
         self.screen = screen
         self.settings = settings
         self.connection = connection
-        self.menu = self.EndMenu(self.screen)
+        self.menu = self.EndMenu(screen)
 
     def check_events(self):
         selection = self.menu.check_menu_events()
