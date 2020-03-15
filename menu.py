@@ -215,7 +215,8 @@ class Popup():
         self._fg_rect = properties[1]
 
 class Menu():
-    def __init__(self, labels=[], selectables=[], rect=None, bg_color=None):
+    def __init__(self, screen, labels=[], selectables=[], rect=None, bg_color=None):
+        self.screen = screen
         self.rect = rect
         self.labels = labels
         self.selectables = selectables
