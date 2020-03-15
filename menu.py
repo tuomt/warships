@@ -158,62 +158,6 @@ class Button():
     def get_surface(self):
         return self._surf
 
-class Popup():
-    def __init__(self, text, font, rect, buttons=[], fg_color = None, bg_color = None):
-        self.visible = False
-        self.buttons = buttons
-        self._text = text
-        self._font = font
-        fg_color = color.BLACK
-        if fg_color != None:
-            self.fg_color = fg_color
-        self.bg_color = color.WHITE
-        if bg_color != None:
-            self.bg_color = bg_color
-        # Keeps the label centered on the same spot even if the text is changed
-        self.keep_center = True
-        # Rectangle defines the size and position of the window
-        self.rect = rect
-        self._bg_surf = pygame.Surface(rect.size)
-        self._bg_surf.fill(bg_color)
-        self.surf = self._bg_surf.copy()
-        properties = self._font.render(self.text, self.fg_color, color.RED)
-        self._fg_surf = properties[0]
-        self._fg_rect = properties[1]
-        self._fg_rect.centerx = self.rect.centerx
-        self._fg_rect.x -= self.rect.x
-        self._fg_rect.y = 50
-        self.surf.blit(self._fg_surf, self._fg_rect)
-        for btn in self.buttons:
-            self.surf.blit(btn.get_surface(), btn.get_rect())
-        
-    def draw(self, dest):
-        dest.blit(self.surf, self.rect)
-
-    def update_surf(self):
-        # Returns a tuple: the new surface and the rectangle
-        properties = self._font.render(self.text, self.fg_color, self.bg_color)
-        if self.keep_center:
-            properties[1].center = self._fg_rect.center
-        else:
-            properties[1].x = self._fg_rect.x
-            properties[1].y = self._fg_rect.y
-        return properties
-
-    def get_surface(self):
-        return self.surf
-
-    @property
-    def text(self):
-        return self._text
-
-    @text.setter
-    def text(self, value):
-        self._text = value
-        properties = self.update_surf()
-        self._fg_surf = properties[0]
-        self._fg_rect = properties[1]
-
 class Menu():
     def __init__(self, screen, labels=[], selectables=[], rect=None, bg_color=None):
         self.screen = screen
