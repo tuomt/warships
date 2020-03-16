@@ -304,6 +304,7 @@ class Placement(Scene):
         self.scene_handler = scene_handler
         self.screen = screen
         self.connection = connection
+        self.disconnect_menu = DisconnectMenu(screen)
         self.ready_msg_sent = False
         self.ready_msg_received = False
         # Create a game grid
@@ -353,35 +354,43 @@ class Placement(Scene):
     def check_events(self):
         moved = False
         # Check events
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    exit()
-                if self.ready:
-                    # Return because all ships have been placed and we don't need to check movement keys anymore
-                    return
-                elif event.key == pygame.K_d:
-                    print(f"Ship coords:", awaiting_ship.rect.x, awaiting_ship.rect.y)
-                elif event.key == pygame.K_r:
-                    self.awaiting_ship.rotate(self.grid.get_rect())
-                    moved = True
-                elif event.key == pygame.K_UP:
-                    self.awaiting_ship.move_up()
-                    moved = True
-                elif event.key == pygame.K_DOWN:
-                    self.awaiting_ship.move_down()
-                    moved = True
-                elif event.key == pygame.K_RIGHT:
-                    self.awaiting_ship.move_right()
-                    moved = True
-                elif event.key == pygame.K_LEFT:
-                    self.awaiting_ship.move_left()
-                    moved = True
-                # Collisions are checked again if the ship has been moved
-                if moved:
-                    self.collides = self.check_collision()
-                elif event.key == pygame.K_RETURN:
-                    self.try_place()
+        if self.disconnect_menu.visible:
+            selection = self.disconnect_menu.check_menu_events()
+            if selection == self.disconnect_menu.no_btn or selection == -1:
+                self.disconnect_menu.visible = False
+            elif selection == self.disconnect_menu.yes_btn:
+                self.connection.close()
+                self.scene_handler.switch(Scene.MAIN_MENU, self.screen)
+        else:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.disconnect_menu.visible = True
+                    if self.ready:
+                        # Return because all ships have been placed and we don't need to check movement keys anymore
+                        return
+                    elif event.key == pygame.K_d:
+                        print(f"Ship coords:", awaiting_ship.rect.x, awaiting_ship.rect.y)
+                    elif event.key == pygame.K_r:
+                        self.awaiting_ship.rotate(self.grid.get_rect())
+                        moved = True
+                    elif event.key == pygame.K_UP:
+                        self.awaiting_ship.move_up()
+                        moved = True
+                    elif event.key == pygame.K_DOWN:
+                        self.awaiting_ship.move_down()
+                        moved = True
+                    elif event.key == pygame.K_RIGHT:
+                        self.awaiting_ship.move_right()
+                        moved = True
+                    elif event.key == pygame.K_LEFT:
+                        self.awaiting_ship.move_left()
+                        moved = True
+                    # Collisions are checked again if the ship has been moved
+                    if moved:
+                        self.collides = self.check_collision()
+                    elif event.key == pygame.K_RETURN:
+                        self.try_place()
                     
     def check_collision(self):
         self.colliding_squares = []
@@ -436,6 +445,8 @@ class Placement(Scene):
             transparent_surf.set_alpha(128)
             transparent_surf.fill(color.RED)
             self.screen.blit(transparent_surf, (s.rect.x, s.rect.y)) 
+        if self.disconnect_menu.visible:
+            self.disconnect_menu.draw_components()
         # Status
         #screen.blit(status.surf, status.rect)
 
