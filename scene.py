@@ -458,32 +458,31 @@ class Placement(Scene):
         else:
             return False
 
+class DisconnectMenu(Scene, menu.Menu):
+    def __init__(self, screen):
+        self.visible = False
+        center = screen.get_rect().center
+        self.title = menu.Label("Exit to main menu?", font, color.BLACK, color.BLUE_GREY)
+        self.title.rect.center = center
+        self.title.rect.y = 250
+        popup_offset_x = 200
+        popup_offset_y = 200
+        pop_rect = pygame.Rect(popup_offset_x, popup_offset_y, SCREEN_WIDTH - popup_offset_x * 2, SCREEN_HEIGHT - popup_offset_y * 2)
+        self.yes_btn = menu.Button("Yes", font, color.BLACK, color.BLUE_GREY)
+        self.yes_btn.rect.center = pop_rect.center
+        self.yes_btn.rect.y += 25
+        self.no_btn = menu.Button("No", font, color.BLACK, color.BLUE_GREY)
+        self.no_btn.rect.center = pop_rect.center
+        self.no_btn.rect.y += 100
+        menu.Menu.__init__(self, screen, [self.title], [self.no_btn, self.yes_btn], pop_rect, color.BLUE_GREY)
 
 class Clash(Scene):
-    class DisconnectMenu(Scene, menu.Menu):
-        def __init__(self, screen):
-            self.visible = False
-            center = screen.get_rect().center
-            self.title = menu.Label("Exit to main menu?", font, color.BLACK, color.BLUE_GREY)
-            self.title.rect.center = center
-            self.title.rect.y = 250
-            popup_offset_x = 200
-            popup_offset_y = 200
-            pop_rect = pygame.Rect(popup_offset_x, popup_offset_y, SCREEN_WIDTH - popup_offset_x * 2, SCREEN_HEIGHT - popup_offset_y * 2)
-            self.yes_btn = menu.Button("Yes", font, color.BLACK, color.BLUE_GREY)
-            self.yes_btn.rect.center = pop_rect.center
-            self.yes_btn.rect.y += 25
-            self.no_btn = menu.Button("No", font, color.BLACK, color.BLUE_GREY)
-            self.no_btn.rect.center = pop_rect.center
-            self.no_btn.rect.y += 100
-            menu.Menu.__init__(self, screen, [self.title], [self.no_btn, self.yes_btn], pop_rect, color.BLUE_GREY)
-
     def __init__(self, scene_handler, screen, settings, connection, placed_ships):
         self.scene_handler = scene_handler
         self.screen = screen
         self.settings = settings
         self.connection = connection
-        self.disconnect_menu = self.DisconnectMenu(screen)
+        self.disconnect_menu = DisconnectMenu(screen)
         # Create the grids
         offset_x = 50
         offset_y = 50
