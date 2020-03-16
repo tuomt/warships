@@ -460,11 +460,30 @@ class Placement(Scene):
 
 
 class Clash(Scene):
+    class DisconnectMenu(Scene, menu.Menu):
+        def __init__(self, screen):
+            self.visible = False
+            center = screen.get_rect().center
+            self.title = menu.Label("Exit to main menu?", font, color.BLACK, color.BLUE_GREY)
+            self.title.rect.center = center
+            self.title.rect.y = 250
+            popup_offset_x = 200
+            popup_offset_y = 200
+            pop_rect = pygame.Rect(popup_offset_x, popup_offset_y, SCREEN_WIDTH - popup_offset_x * 2, SCREEN_HEIGHT - popup_offset_y * 2)
+            self.yes_btn = menu.Button("Yes", font, color.BLACK, color.BLUE_GREY)
+            self.yes_btn.rect.center = pop_rect.center
+            self.yes_btn.rect.y += 25
+            self.no_btn = menu.Button("No", font, color.BLACK, color.BLUE_GREY)
+            self.no_btn.rect.center = pop_rect.center
+            self.no_btn.rect.y += 100
+            menu.Menu.__init__(self, screen, [self.title], [self.no_btn, self.yes_btn], pop_rect, color.BLUE_GREY)
+
     def __init__(self, scene_handler, screen, settings, connection, placed_ships):
         self.scene_handler = scene_handler
         self.screen = screen
         self.settings = settings
         self.connection = connection
+        self.disconnect_menu = self.DisconnectMenu(screen)
         # Create the grids
         offset_x = 50
         offset_y = 50
@@ -502,28 +521,36 @@ class Clash(Scene):
                 pass
 
     def check_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    exit()
-                if self.your_turn:
-                    if event.key == pygame.K_UP:
-                        self.crosshair.move_up()
-                    elif event.key == pygame.K_DOWN:
-                        self.crosshair.move_down()
-                    elif event.key == pygame.K_RIGHT:
-                        self.crosshair.move_right()
-                    elif event.key == pygame.K_LEFT:
-                        self.crosshair.move_left()
-                    elif event.key == pygame.K_RETURN:
-                        if self.try_strike():
-                            target_square = self.crosshair.get_squares().sprites()[0]
-                            self.my_strikes.add(target_square)
-                            strike_pos = target_square.pos
-                            # Send the strike coordinates to opponent
-                            strike_packet = Packet(strike_pos, Packet.T_STRIKE)
-                            self.connection.send_queue.put(strike_packet)
-                            self.your_turn = False
+        if self.disconnect_menu.visible:
+            selection = self.disconnect_menu.check_menu_events()
+            if selection == self.disconnect_menu.no_btn or selection == -1:
+                self.disconnect_menu.visible = False
+            elif selection == self.disconnect_menu.yes_btn:
+                self.connection.close()
+                self.scene_handler.switch(Scene.MAIN_MENU, self.screen)
+        else:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.disconnect_menu.visible = True
+                    if self.your_turn:
+                        if event.key == pygame.K_UP:
+                            self.crosshair.move_up()
+                        elif event.key == pygame.K_DOWN:
+                            self.crosshair.move_down()
+                        elif event.key == pygame.K_RIGHT:
+                            self.crosshair.move_right()
+                        elif event.key == pygame.K_LEFT:
+                            self.crosshair.move_left()
+                        elif event.key == pygame.K_RETURN:
+                            if self.try_strike():
+                                target_square = self.crosshair.get_squares().sprites()[0]
+                                self.my_strikes.add(target_square)
+                                strike_pos = target_square.pos
+                                # Send the strike coordinates to opponent
+                                strike_packet = Packet(strike_pos, Packet.T_STRIKE)
+                                self.connection.send_queue.put(strike_packet)
+                                self.your_turn = False
 
     def try_strike(self):
         """
@@ -619,6 +646,8 @@ class Clash(Scene):
                 # Send game over message
                 game_over = Packet([1], Packet.T_GAME_OVER)
                 self.connection.send_queue.put(game_over)
+                # Hide the disconnect menu if it's open
+                self.disconnect_menu.visible = False
                 self.draw()
                 self.scene_handler.switch(Scene.END, self.screen, self.settings, self.connection)
             else:
@@ -652,6 +681,8 @@ class Clash(Scene):
         self.my_misses.draw(self.screen)
         self.enemy_hits.draw(self.screen)
         self.enemy_misses.draw(self.screen)
+        if self.disconnect_menu.visible:
+            self.disconnect_menu.draw_components()
 
 class End(Scene):
     class EndMenu(menu.Menu):
