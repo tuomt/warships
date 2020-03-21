@@ -89,8 +89,8 @@ class Ship(GridComponent):
         # Scale
         width = size[0]
         height = size[1]
-        self._default_surf = transform.scale(self._default_surf, (width * self.size, height))
-        self._rotated_surf = transform.scale(self._rotated_surf, (width, height * self.size))
+        self._default_surf = transform.smoothscale(self._default_surf, (width * self.size, height))
+        self._rotated_surf = transform.smoothscale(self._rotated_surf, (width, height * self.size))
         rotated = self._angles[1]
         if self.rotated:
             self.image = self._rotated_surf.copy()

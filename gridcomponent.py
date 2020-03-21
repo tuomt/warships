@@ -69,7 +69,7 @@ class GridComponent(pygame.sprite.Sprite):
         # Scale
         width = size[0]
         height = size[1]
-        self.image = pygame.transform.scale(self.image, (width, height))
+        self.image = pygame.transform.smoothscale(self.image, (width, height))
 
         # Update the rectangle
         current_x = self.rect.x
