@@ -417,8 +417,7 @@ class Placement(Scene):
                 msg = "The connection was closed by the opponent."
             else:
                 msg = "The connection was closed unexpectedly."
-            print(msg)
-            self.scene_handler.switch(Scene.MAIN_MENU, self.screen)
+            self.scene_handler.switch(Scene.CONNECTION_CLOSED, self.screen, msg)
 
         if self.ready_msg_sent == False and self.ready:
             packet = Packet([1], Packet.T_READY)
@@ -671,8 +670,7 @@ class Clash(Scene):
                 msg = "The connection was closed by the opponent."
             else:
                 msg = "The connection was closed unexpectedly."
-            print(msg)
-            self.scene_handler.switch(Scene.MAIN_MENU, self.screen)
+            self.scene_handler.switch(Scene.CONNECTION_CLOSED, self.screen, msg)
 
         # Enemy strike
         enemy_strike_packet = self.connection.get_packet(Packet.T_STRIKE)
@@ -764,7 +762,6 @@ class End(Scene):
             else:
                 msg = "The connection was closed unexpectedly."
             print(msg)
-            self.scene_handler.switch(Scene.MAIN_MENU, self.screen)
 
     def draw(self):
         self.menu.draw_components()
