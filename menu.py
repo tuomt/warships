@@ -29,7 +29,7 @@ class Label():
             self.surf = pygame.transform.smoothscale(self.surf, (scale_rect.w, scale_rect.h))
             self.rect = scale_rect
         
-    def update_surf(self):
+    def update(self):
         # Returns a tuple: the new surface and the rectangle
         properties = self._font.render(self.text, self.fg_color, self.bg_color)
         new_surf = properties[0]
@@ -55,7 +55,7 @@ class Label():
     @text.setter
     def text(self, value):
         self._text = value
-        properties = self.update_surf()
+        properties = self.update()
         self.surf = properties[0]
         self.rect = properties[1]
 
