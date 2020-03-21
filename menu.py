@@ -9,7 +9,7 @@ pygame.freetype.init()
 # TODO: See if classes' variables should be public instead of private
 
 class Label():
-    def __init__(self, text, font, fg_color = None, bg_color = None):
+    def __init__(self, text, font, fg_color=None, bg_color=None, scale_rect=None):
         self._text = text
         self._font = font
         fg_color = color.BLACK
@@ -18,21 +18,32 @@ class Label():
         self.bg_color = color.WHITE
         if bg_color != None:
             self.bg_color = bg_color
+        self.scale_rect = scale_rect
         # Keeps the label centered on the same spot even if the text is changed
         self.keep_center = True
         properties = self._font.render(self.text, self.fg_color, self.bg_color)
         self.surf = properties[0]
         self.rect = properties[1]
+        if scale_rect != None:
+            # Scale the surface
+            self.surf = pygame.transform.smoothscale(self.surf, (scale_rect.w, scale_rect.h))
+            self.rect = scale_rect
         
     def update_surf(self):
         # Returns a tuple: the new surface and the rectangle
-        new_surf = self._font.render(self.text, self.fg_color, self.bg_color)
+        properties = self._font.render(self.text, self.fg_color, self.bg_color)
+        new_surf = properties[0]
+        new_rect = properties[1]
+        if self.scale_rect != None:
+            # Scale the surface
+            new_surf = pygame.transform.smoothscale(new_surf, (self.scale_rect.w, self.scale_rect.h))
+            new_rect = self.scale_rect
         if self.keep_center:
-            new_surf[1].center = self.rect.center
+            new_rect.center = self.rect.center
         else:
-            new_surf[1].x = self.rect.x
-            new_surf[1].y = self.rect.y
-        return new_surf
+            new_rect.x = self.rect.x
+            new_rect.y = self.rect.y
+        return (new_surf, new_rect)
 
     def get_surface(self):
         return self.surf
