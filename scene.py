@@ -49,6 +49,8 @@ class SceneHandler():
             self.scene = Clash(self, *args)
         elif dest == Scene.END:
             self.scene = End(self, *args)
+        elif dest == Scene.CONNECTION_CLOSED:
+            self.scene = ConnectionClosedMenu(self, *args)
 
 class Scene():
     MAIN_MENU         = 1
@@ -59,6 +61,7 @@ class Scene():
     PLACEMENT         = 6
     CLASH             = 7
     END               = 8
+    CONNECTION_CLOSED = 9
 
     def __init__(self):
         raise NotImplementedError
@@ -486,6 +489,34 @@ class DisconnectMenu(Scene, menu.Menu):
         self.no_btn.rect.center = pop_rect.center
         self.no_btn.rect.y += 100
         menu.Menu.__init__(self, screen, [self.title], [self.no_btn, self.yes_btn], pop_rect, color.BLUE_GREY)
+
+class ConnectionClosedMenu(Scene, menu.Menu):
+    def __init__(self, scene_handler, screen, message):
+        self.scene_handler = scene_handler
+        self.screen = screen
+        center = screen.get_rect().center
+        popup_offset_x = 200
+        popup_offset_y = 200
+        pop_rect = pygame.Rect(popup_offset_x, popup_offset_y, SCREEN_WIDTH - popup_offset_x * 2, SCREEN_HEIGHT - popup_offset_y * 2)
+        title_rect = pygame.Rect(0, 0, pop_rect.w - 70, 62)
+        self.title = menu.Label(message, font, color.BLACK, color.BLUE_GREY, title_rect)
+        self.title.rect.center = center
+        self.title.rect.y = 250
+        self.ok_btn = menu.Button("OK", font, color.BLACK, color.BLUE_GREY)
+        self.ok_btn.rect.center = pop_rect.center
+        self.ok_btn.rect.y += 25
+        menu.Menu.__init__(self, screen, [self.title], [self.ok_btn], pop_rect, color.BLUE_GREY)
+
+    def check_events(self):
+        selection = self.check_menu_events()
+        if selection == -1 or selection == self.ok_btn:
+            self.scene_handler.switch(Scene.MAIN_MENU, self.screen)
+
+    def do_logic(self):
+        pass
+
+    def draw(self):
+        self.draw_components()
 
 class Clash(Scene):
     def __init__(self, scene_handler, screen, settings, connection, placed_ships):
