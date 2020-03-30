@@ -145,10 +145,10 @@ class HostMenu(Scene, menu.Menu):
         self.back_btn.rect.center = center
         self.back_btn.rect.y += 175
         # Create text boxes
-        self.ip_box = menu.TextBox(self.ip, mono_font, 15, color.BLACK, color.WHITE, None, None)
+        self.ip_box = menu.TextBox(self.ip, mono_font, 15, color.BLACK, color.WHITE, None)
         self.ip_box.rect.center = center
         self.ip_box.rect.y -= 150
-        self.port_box = menu.TextBox(str(self.port), mono_font, 15, color.BLACK, color.WHITE, None, None)
+        self.port_box = menu.TextBox(str(self.port), mono_font, 15, color.BLACK, color.WHITE, None)
         self.port_box.rect.center = center
         self.port_box.rect.y -= 75
         selectables = [self.ip_box, self.port_box, self.settings_btn, self.start_btn, self.back_btn]
@@ -231,10 +231,10 @@ class ConnectMenu(Scene, menu.Menu):
         self.back_btn.rect.center = center
         self.back_btn.rect.y += 100
         # Create text boxes
-        self.ip_box = menu.TextBox(self.ip, mono_font, 15, color.BLACK, color.WHITE, None, None)
+        self.ip_box = menu.TextBox(self.ip, mono_font, 15, color.BLACK, color.WHITE, None)
         self.ip_box.rect.center = center
         self.ip_box.rect.y -= 150
-        self.port_box = menu.TextBox(str(self.port), mono_font, 15, color.BLACK, color.WHITE, None, None)
+        self.port_box = menu.TextBox(str(self.port), mono_font, 15, color.BLACK, color.WHITE, None)
         self.port_box.rect.center = center
         self.port_box.rect.y -= 75
         selectables = [self.ip_box, self.port_box, self.connect_btn, self.back_btn]
