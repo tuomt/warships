@@ -48,6 +48,9 @@ class Label():
     def get_surface(self):
         return self.surf
 
+    def draw(self, dest):
+        dest.blit(self.surf, self.rect)
+
     @property
     def text(self):
         return self._text
@@ -148,6 +151,9 @@ class TextBox():
         else:
             return False
 
+    def draw(self, dest):
+        dest.blit(self.surf, self.rect)
+
 class Button():
     def __init__(self, text, font, fg_color=None, bg_color=None):
         self._text = text
@@ -168,6 +174,9 @@ class Button():
 
     def get_surface(self):
         return self._surf
+
+    def draw(self, dest):
+        dest.blit(self.surf, self.rect)
 
 class Menu():
     def __init__(self, screen, labels=[], selectables=[], rect=None, bg_color=None):
