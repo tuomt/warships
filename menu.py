@@ -12,11 +12,13 @@ class Label():
     def __init__(self, text, font, fg_color=None, bg_color=None, scale_rect=None):
         self._text = text
         self._font = font
-        fg_color = color.BLACK
-        if fg_color != None:
+        if fg_color == None:
+            self.fg_color = color.BLACK
+        else:
             self.fg_color = fg_color
-        self.bg_color = color.WHITE
-        if bg_color != None:
+        if bg_color == None:
+            self.bg_color = color.WHITE
+        else:
             self.bg_color = bg_color
         self.scale_rect = scale_rect
         # Keeps the label centered on the same spot even if the text is changed
@@ -63,28 +65,25 @@ class Label():
         self.rect = properties[1]
 
 class TextBox():
-    # TODO: fixed size txtbox in which you can type past the borders
-    # TODO: initial text color, when the text hasn't been edited yet
-
-    def __init__(self, text, font, size, fg_color = None, bg_color = None, bor_color = None, init_color = None):
+    def __init__(self, text, font, size, fg_color = None, bg_color = None, bor_color = None):
         self._bor_w = 10
         self._text = text
         self._len = len(self._text) 
         #self._max_len = max_len
         self._font = font
         self._size = size
-        self._fg_color = color.BLACK
-        if fg_color != None:
+        if fg_color == None:
+            self._fg_color = color.BLACK
+        else:
             self._fg_color = fg_color
-        self._bg_color = color.WHITE
-        if bg_color != None:
+        if bg_color == None:
+            self._bg_color = color.WHITE
+        else:
             self._bg_color = bg_color
-        self._bor_color = color.RED_BROWN
-        if bor_color != None:
+        if bor_color == None:
+            self._bor_color = color.RED_BROWN
+        else:
             self._bor_color = bor_color
-        self._init_color = color.GREY
-        if init_color != None:
-            self._init_color = init_color
         # Set the width of the textbox based on the size parameter
         # This only works correctly when using monospace fonts
         blank = ""
@@ -158,16 +157,16 @@ class Button():
     def __init__(self, text, font, fg_color=None, bg_color=None):
         self._text = text
         self._font = font
-        self._fg_color = color.BLACK
-        if fg_color != None:
+        if fg_color == None:
+            self._fg_color = color.BLACK
+        else:
             self._fg_color = fg_color
-        self._bg_color = color.WHITE
-        if bg_color != None:
+        if bg_color == None:
+            self._bg_color = color.WHITE
+        else:
             self._bg_color = bg_color
         # Create a surface and a rectangle
         (self._surf, self.rect) = font.render(text, fg_color, bg_color)
-
-        self._action = None
 
     def get_rect(self):
         return self.rect
