@@ -5,6 +5,7 @@ import settings
 import grid
 import networking.client
 import networking.server
+import random
 from networking.packet import Packet
 import color
 from crosshair import Crosshair
@@ -551,14 +552,16 @@ class Clash(Scene):
         for ship in self.my_ships:
             ship.transform(self.square_size, self.my_squares)
         # Decide who goes first
-        self.your_turn = True
+        self.your_turn = False
         going_first = 0
-        is_host = False
+        is_host = isinstance(self.connection, networking.server.Server)
         if is_host:
             going_first = random.randint(0, 1)
             if going_first == 0:
-                # Send "go first" -message to the opponent
-                pass
+                self.your_turn = True
+            else:
+                go_first_packet = Packet([1], Packet.T_YOUR_TURN)
+                self.connection.send_queue.put(go_first_packet)
 
     def check_events(self):
         if self.disconnect_menu.visible:
@@ -671,6 +674,10 @@ class Clash(Scene):
             else:
                 msg = "The connection was closed unexpectedly."
             self.scene_handler.switch(Scene.CONNECTION_CLOSED, self.screen, msg)
+        
+        turn_packet = self.connection.get_packet(Packet.T_YOUR_TURN)
+        if turn_packet != None:
+            self.your_turn = True
 
         # Enemy strike
         enemy_strike_packet = self.connection.get_packet(Packet.T_STRIKE)
