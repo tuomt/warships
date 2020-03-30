@@ -563,6 +563,14 @@ class Clash(Scene):
                 go_first_packet = Packet([1], Packet.T_YOUR_TURN)
                 self.connection.send_queue.put(go_first_packet)
 
+        # Create status labels
+        self.left_status = menu.Label("", font, color.RED, color.GREY)
+        self.left_status.rect.centerx = self.my_grid.get_rect().centerx
+        self.left_status.rect.y = 420
+        self.right_status = menu.Label("", font, color.RED, color.GREY)
+        self.right_status.rect.centerx = self.enemy_grid.get_rect().centerx
+        self.right_status.rect.y = 420
+
     def check_events(self):
         if self.disconnect_menu.visible:
             selection = self.disconnect_menu.check_menu_events()
@@ -639,11 +647,13 @@ class Clash(Scene):
             hitmarker = Hitmarker(self.square_size, self.my_grid.get_rect(), self.my_squares)
             hitmarker.move_to(target_square.rect.x, target_square.rect.y)
             self.enemy_hits.add(hitmarker)
+            self.left_status.text = "A hit!"
             return 1
         else:
             missmarker = Missmarker(self.square_size, self.my_grid.get_rect(), self.my_squares)
             missmarker.move_to(target_square.rect.x, target_square.rect.y)
             self.enemy_misses.add(missmarker)
+            self.left_status.text = "A miss!"
             return 0
 
     def check_strike_result(self, data):
@@ -660,10 +670,12 @@ class Clash(Scene):
             hitmarker = Hitmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
             hitmarker.move_to(target_square.rect.x, target_square.rect.y)
             self.my_hits.add(hitmarker)
+            self.right_status.text = "A hit!"
         else:
             missmarker = Missmarker(self.square_size, self.enemy_grid.get_rect(), self.enemy_squares)
             missmarker.move_to(target_square.rect.x, target_square.rect.y)
             self.my_misses.add(missmarker)
+            self.right_status.text = "A miss!"
 
     def do_logic(self):
         # Check if the connection was closed
@@ -727,6 +739,8 @@ class Clash(Scene):
         self.my_misses.draw(self.screen)
         self.enemy_hits.draw(self.screen)
         self.enemy_misses.draw(self.screen)
+        self.left_status.draw(self.screen)
+        self.right_status.draw(self.screen)
         if self.disconnect_menu.visible:
             self.disconnect_menu.draw_components()
 
