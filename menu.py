@@ -152,7 +152,7 @@ class TextBox():
             return False
 
     def draw(self, dest):
-        dest.blit(self.surf, self.rect)
+        dest.blit(self._surf, self.rect)
 
 class Button():
     def __init__(self, text, font, fg_color=None, bg_color=None):
@@ -176,7 +176,7 @@ class Button():
         return self._surf
 
     def draw(self, dest):
-        dest.blit(self.surf, self.rect)
+        dest.blit(self._surf, self.rect)
 
 class Menu():
     def __init__(self, screen, labels=[], selectables=[], rect=None, bg_color=None):
@@ -242,9 +242,9 @@ class Menu():
             new_surf.fill(self.bg_color)
             self.screen.blit(new_surf, self.rect)
         for label in self.labels:
-            self.screen.blit(label.get_surface(), label.rect)
+            label.draw(self.screen)
         for sel in self.selectables:
-            self.screen.blit(sel.get_surface(), sel.get_rect())
+            sel.draw(self.screen)
         # Draw selection rectangle
         pygame.draw.rect(self.screen, color.GREEN, self.sel_rect, 5)
 
